@@ -149,6 +149,7 @@ def _transform(components, transformed_sql, col_set, table_names, schema):
 
         elif isinstance(c_instance, Filter):
             op = c_instance.production.split()[1]
+            print(f'> adding filter: {c_instance}')
             if op == 'and' or op == 'or':
                 transformed_sql['where'].append(op)
             else:
@@ -167,6 +168,7 @@ def _transform(components, transformed_sql, col_set, table_names, schema):
                     else:
                         fix_col_id = col_set[column.id_c]
                         raise RuntimeError('not found table !!!!')
+                    print(f'Adding None value for: {op} {fix_col_id}')
                     transformed_sql['where'].append((
                         op,
                         agg.production.split()[1],
@@ -190,7 +192,9 @@ def _transform(components, transformed_sql, col_set, table_names, schema):
 
 
 def transform(query, schema, origin=None):
+    print(f'> q: {query}')
     preprocess_schema(schema)
+    #print(f'> schema (pre): {schema}')
     if origin is None:
         lf = query['model_result_replace']
     else:
@@ -204,6 +208,7 @@ def transform(query, schema, origin=None):
     current_table['schema_content'] = [x[1] for x in current_table['column_names_original']]
 
     components = split_logical_form(lf)
+    print(f'> components: {components}')
 
     transformed_sql = dict()
     transformed_sql['sql'] = query
@@ -229,6 +234,7 @@ def transform(query, schema, origin=None):
     else:
         _transform(components, transformed_sql, col_set, table_names, schema)
 
+    print(f'transformed_sql: {transformed_sql}')
     parse_result = to_str(transformed_sql, 1, schema)
 
     parse_result = parse_result.replace('\t', '')
@@ -366,6 +372,7 @@ def preprocess_schema(schema):
 
 
 def to_str(sql_json, N_T, schema, pre_table_names=None):
+    #print(f'sem2sql sql_json: {sql_json}')
     all_columns = list()
     select_clause = list()
     table_names = dict()
@@ -396,7 +403,8 @@ def to_str(sql_json, N_T, schema, pre_table_names=None):
     if 'where' in sql_json:
         conjunctions = list()
         filters = list()
-        # print(sql_json['where'])
+        print_where = sql_json['where']
+        print(f'WHERE: {print_where}')
         for f in sql_json['where']:
             if isinstance(f, str):
                 conjunctions.append(f)
@@ -657,6 +665,20 @@ def to_str(sql_json, N_T, schema, pre_table_names=None):
 
     return sql
 
+def convert2SQL(model, datas):
+    # loading dataSets
+    #datas, schemas = load_dataSets(args)
+    #datas, schemas = load_predict_dataset(args)
+    schemas = model.tables
+    print('Converting semantic to sql...')
+    print(f'> Start: {datas}')
+    alter_not_in(datas, schemas=schemas)
+    alter_inter(datas)
+    alter_column0(datas)
+    print(f'> After: {datas}')
+
+    result = transform(datas[0], schemas[datas[0]['db_id']])
+    return result[0]
 
 if __name__ == '__main__':
 

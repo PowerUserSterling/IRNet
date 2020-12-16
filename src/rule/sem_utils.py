@@ -28,6 +28,16 @@ def load_dataSets(args):
         schemas[table_datas[i]['db_id']] = table_datas[i]
     return datas, schemas
 
+def load_predict_dataSets(args):
+    with open(args.input_path, 'r') as f:
+        datas = json.load(f)
+    with open(os.path.join(args.data_path, 'tables.json'), 'r', encoding='utf8') as f:
+        table_datas = json.load(f)
+    schemas = dict()
+    for i in range(len(table_datas)):
+        schemas[table_datas[i]['db_id']] = table_datas[i]
+    return datas, schemas
+
 
 def partial_match(query, table_name):
     query = [lemma(x) for x in query]

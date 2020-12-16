@@ -16,21 +16,21 @@ import numpy as np
 
 def init_arg_parser():
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--seed', default=5783287, type=int, help='random seed')
+    arg_parser.add_argument('--seed', default=90, type=int, help='random seed')
     arg_parser.add_argument('--cuda', action='store_true', help='use gpu')
-    arg_parser.add_argument('--lr_scheduler', action='store_true', help='use learning rate scheduler')
+    arg_parser.add_argument('--lr_scheduler', default=True, action='store_true', help='use learning rate scheduler')
     arg_parser.add_argument('--lr_scheduler_gammar', default=0.5, type=float, help='decay rate of learning rate scheduler')
-    arg_parser.add_argument('--column_pointer', action='store_true', help='use column pointer')
-    arg_parser.add_argument('--loss_epoch_threshold', default=20, type=int, help='loss epoch threshold')
-    arg_parser.add_argument('--sketch_loss_coefficient', default=0.2, type=float, help='sketch loss coefficient')
-    arg_parser.add_argument('--sentence_features', action='store_true', help='use sentence features')
+    arg_parser.add_argument('--column_pointer', default=True, action='store_true', help='use column pointer')
+    arg_parser.add_argument('--loss_epoch_threshold', default=50, type=int, help='loss epoch threshold')
+    arg_parser.add_argument('--sketch_loss_coefficient', default=1.0, type=float, help='sketch loss coefficient')
+    arg_parser.add_argument('--sentence_features', default=True, action='store_true', help='use sentence features')
     arg_parser.add_argument('--model_name', choices=['transformer', 'rnn', 'table', 'sketch'], default='rnn',
                             help='model name')
 
     arg_parser.add_argument('--lstm', choices=['lstm', 'lstm_with_dropout', 'parent_feed'], default='lstm')
 
-    arg_parser.add_argument('--load_model', default=None, type=str, help='load a pre-trained model')
-    arg_parser.add_argument('--glove_embed_path', default="glove.42B.300d.txt", type=str)
+    arg_parser.add_argument('--load_model', default='./saved_model/IRNet_pretrained.model', type=str, help='load a pre-trained model')
+    arg_parser.add_argument('--glove_embed_path', default="./data/glove.42B.300d.txt", type=str)
 
     arg_parser.add_argument('--batch_size', default=64, type=int, help='batch size')
     arg_parser.add_argument('--beam_size', default=5, type=int, help='beam size for beam search')
@@ -39,8 +39,8 @@ def init_arg_parser():
 
     arg_parser.add_argument('--action_embed_size', default=128, type=int, help='size of word embeddings')
     arg_parser.add_argument('--type_embed_size', default=128, type=int, help='size of word embeddings')
-    arg_parser.add_argument('--hidden_size', default=100, type=int, help='size of LSTM hidden states')
-    arg_parser.add_argument('--att_vec_size', default=100, type=int, help='size of attentional vector')
+    arg_parser.add_argument('--hidden_size', default=300, type=int, help='size of LSTM hidden states')
+    arg_parser.add_argument('--att_vec_size', default=300, type=int, help='size of attentional vector')
     arg_parser.add_argument('--dropout', default=0.3, type=float, help='dropout rate')
     arg_parser.add_argument('--word_dropout', default=0.2, type=float, help='word dropout rate')
 
@@ -67,8 +67,14 @@ def init_arg_parser():
     arg_parser.add_argument('--dataset', default="./data", type=str)
 
     arg_parser.add_argument('--epoch', default=50, type=int, help='Maximum Epoch')
-    arg_parser.add_argument('--save', default='./', type=str,
+    arg_parser.add_argument('--save', default='./eval', type=str,
                             help="Path to save the checkpoint and logs of epoch")
+
+    # added end-to-end prediction args
+    arg_parser.add_argument('--table_path', type=str, default="data/spider/tables.json", help='table dataset', required=True)
+    arg_parser.add_argument('--output', type=str, default="serve/preprocessed.json", help='output data')
+    arg_parser.add_argument('--db_id', type=str, default="concert_singer", help='database id', required=True)
+    arg_parser.add_argument('--question', type=str, default="What is the average, minimum, and maximum age of all singers from France?", help='question', required=True)
 
     return arg_parser
 

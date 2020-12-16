@@ -278,6 +278,7 @@ def epoch_acc(model, batch_size, sql_data, table_data, beam_size=3):
 
                 pred = " ".join([str(x) for x in results[0].actions])
                 for x in results:
+                    print(f'>> score: {x.score}, act: {x.actions}')
                     list_preds.append(" ".join(str(x.actions)))
             except Exception as e:
                 # print('Epoch Acc: ', e)
@@ -285,23 +286,26 @@ def epoch_acc(model, batch_size, sql_data, table_data, beam_size=3):
                 # print(results_all)
                 pred = ""
 
+            #print(f'> list_preds: {list_preds}')
             simple_json = example.sql_json['pre_sql']
 
             simple_json['sketch_result'] =  " ".join(str(x) for x in results_all[1])
             simple_json['model_result'] = pred
 
-            truth_sketch = " ".join([str(x) for x in example.sketch])
-            truth_rule_label = " ".join([str(x) for x in example.tgt_actions])
+            #truth_sketch = " ".join([str(x) for x in example.sketch])
+            #truth_rule_label = " ".join([str(x) for x in example.tgt_actions])
+            #print(f'> truth_sketch: {truth_sketch}')
+            #print(f'> truth_rule_label: {truth_rule_label}')
 
-            if truth_sketch == simple_json['sketch_result']:
-                sketch_correct += 1
-            if truth_rule_label == simple_json['model_result']:
-                rule_label_correct += 1
-            total += 1
+            #if truth_sketch == simple_json['sketch_result']:
+            #    sketch_correct += 1
+            #if truth_rule_label == simple_json['model_result']:
+            #    rule_label_correct += 1
+            #total += 1
 
             json_datas.append(simple_json)
         st = ed
-    return json_datas, float(sketch_correct)/float(total), float(rule_label_correct)/float(total)
+    return json_datas #, float(sketch_correct)/float(total), float(rule_label_correct)/float(total)
 
 def eval_acc(preds, sqls):
     sketch_correct, best_correct = 0, 0
@@ -333,7 +337,7 @@ def load_dataset(dataset_dir, use_small=False):
 
     TABLE_PATH = os.path.join(dataset_dir, "tables.json")
     TRAIN_PATH = os.path.join(dataset_dir, "train.json")
-    DEV_PATH = os.path.join(dataset_dir, "dev.json")
+    DEV_PATH = os.path.join(dataset_dir, "manual.json") # !!! dev.json
     with open(TABLE_PATH) as inf:
         print("Loading data from %s"%TABLE_PATH)
         table_data = json.load(inf)
@@ -343,6 +347,18 @@ def load_dataset(dataset_dir, use_small=False):
 
     return train_sql_data, train_table_data, val_sql_data, val_table_data
 
+def load_predict_dataset(dataset_dir, dev_path="data/manual.json", use_small=False):
+    print("Loading from datasets...")
+
+    TABLE_PATH = os.path.join(dataset_dir, "tables.json")
+    DEV_PATH = dev_path #os.path.join(dataset_dir, filename) # !!! dev.json
+    with open(TABLE_PATH) as inf:
+        print("Loading data from %s"%TABLE_PATH)
+        table_data = json.load(inf)
+
+    val_sql_data, val_table_data = load_data_new(DEV_PATH, table_data, use_small=use_small)
+
+    return val_sql_data, val_table_data
 
 def save_checkpoint(model, checkpoint_name):
     torch.save(model.state_dict(), checkpoint_name)

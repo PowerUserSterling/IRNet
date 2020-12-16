@@ -8,7 +8,6 @@ save_name=$2
 
 CUDA_VISIBLE_DEVICES=$devices python -u eval.py --dataset ./data \
 --glove_embed_path ./data/glove.42B.300d.txt \
---cuda \
 --epoch 50 \
 --loss_epoch_threshold 50 \
 --sketch_loss_coefficie 1.0 \
