@@ -353,11 +353,18 @@ def model_fn(model_dir):
     tables = load_tables(args)
     return Model(args, model, tables)
 
+def predict_fn(model, input):
+    datas = create_datas(model.tables, input["db"], input["question"])
+    preprocessed = process_datas(datas, model.args)
+    #print(f'Preprocessed: {preprocessed}')
+    sql = eval_inline(model, preprocessed)
+    return sql
+
 if __name__ == '__main__':
     model = model_fn('./saved_model/IRNet_pretrained.model')
     db = model.args.db_id
     while True:
-        q = input(f'{db}> ') 
+        q = input(f'{db}> ')
         parts = q.split()
         if len(parts) > 1 and parts[0] == "db":
             db = parts[1]
