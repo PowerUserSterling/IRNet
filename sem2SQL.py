@@ -192,7 +192,7 @@ def _transform(components, transformed_sql, col_set, table_names, schema):
 
 
 def transform(query, schema, origin=None):
-    print(f'> q: {query}')
+    #print(f'> q: {query}')
     preprocess_schema(schema)
     #print(f'> schema (pre): {schema}')
     if origin is None:
@@ -208,7 +208,7 @@ def transform(query, schema, origin=None):
     current_table['schema_content'] = [x[1] for x in current_table['column_names_original']]
 
     components = split_logical_form(lf)
-    print(f'> components: {components}')
+    #print(f'> components: {components}')
 
     transformed_sql = dict()
     transformed_sql['sql'] = query
@@ -234,7 +234,7 @@ def transform(query, schema, origin=None):
     else:
         _transform(components, transformed_sql, col_set, table_names, schema)
 
-    print(f'transformed_sql: {transformed_sql}')
+    #print(f'transformed_sql: {transformed_sql}')
     parse_result = to_str(transformed_sql, 1, schema)
 
     parse_result = parse_result.replace('\t', '')
@@ -671,11 +671,11 @@ def convert2SQL(model, datas):
     #datas, schemas = load_predict_dataset(args)
     schemas = model.tables
     print('Converting semantic to sql...')
-    print(f'> Start: {datas}')
+    #print(f'> Start: {datas}')
     alter_not_in(datas, schemas=schemas)
     alter_inter(datas)
     alter_column0(datas)
-    print(f'> After: {datas}')
+    #print(f'> After: {datas}')
 
     result = transform(datas[0], schemas[datas[0]['db_id']])
     return result[0]

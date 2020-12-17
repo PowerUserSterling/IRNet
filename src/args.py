@@ -71,10 +71,10 @@ def init_arg_parser():
                             help="Path to save the checkpoint and logs of epoch")
 
     # added end-to-end prediction args
-    arg_parser.add_argument('--table_path', type=str, default="data/spider/tables.json", help='table dataset', required=True)
+    arg_parser.add_argument('--table_path', type=str, default="data/spider/tables.json", help='table dataset')
     arg_parser.add_argument('--output', type=str, default="serve/preprocessed.json", help='output data')
-    arg_parser.add_argument('--db_id', type=str, default="concert_singer", help='database id', required=True)
-    arg_parser.add_argument('--question', type=str, default="What is the average, minimum, and maximum age of all singers from France?", help='question', required=True)
+    arg_parser.add_argument('--db_id', type=str, default="concert_singer", help='database id')
+    arg_parser.add_argument('--question', type=str, default="What is the average, minimum, and maximum age of all singers from France?", help='question')
 
     return arg_parser
 
