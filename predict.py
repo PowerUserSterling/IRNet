@@ -16,16 +16,17 @@ from src.rule import semQL
 from nltk.tokenize import word_tokenize
 from sem2SQL import convert2SQL
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import logging
+
 class Model:
-    def __init__(self, args, model, tables):
+    def __init__(self, args, model):
         self.args = args
         self.model = model
-        self.tables = tables
+        self.tables = None
         self.datas = []
 
-def load_tables(args):
-    with open(args.table_path, 'r', encoding='utf8') as f:
-        table_datas = json.load(f)
+def load_tables(table_datas):
     output_tab = {}
     tables = {}
     tabel_name = set()
@@ -318,7 +319,6 @@ def evaluate(args):
                            beam_size=args.beam_size)
     #print('Sketch Acc: %f, Acc: %f' % (sketch_acc, acc))
     # utils.eval_acc(json_datas, val_sql_data)
-    import json
     with open('serve/prediction.json', 'w') as f:
         json.dump(json_datas, f)
 
@@ -328,7 +328,15 @@ def eval_inline(model, datas):
                            beam_size=model.args.beam_size)
     #print(f'-> {json_datas}')
     sql = convert2SQL(model, json_datas)
-    return sql
+    return {"sql": sql, "model_result": json_datas}
+
+def read_input(filename):
+    filepath = os.path.join('./data', filename)
+    print(f'Loading input from {filename} -> {filepath}')
+    with open(filepath, 'r', encoding='utf8') as f:
+        data = f.read()
+        return data
+    return '{}'
 
 def model_fn(model_dir):
     arg_parser = arg.init_arg_parser()
@@ -350,17 +358,99 @@ def model_fn(model_dir):
     model.load_state_dict(pretrained_modeled)
 
     model.word_emb = utils.load_word_emb(args.glove_embed_path)
-    tables = load_tables(args)
-    return Model(args, model, tables)
+    #with open(args.table_path, 'r', encoding='utf8') as f:
+    #    table_datas = json.load(f)
+    #tables = load_tables(table_datas)
+    return Model(args, model)
+
+def input_fn(request_body, request_content_type):
+    if request_content_type == "application/json":
+        return json.loads(request_body)
+    else:
+        print(f'Unhandled input content type {request_content_type}')
+        return {}
 
 def predict_fn(model, input):
     datas = create_datas(model.tables, input["db"], input["question"])
     preprocessed = process_datas(datas, model.args)
     #print(f'Preprocessed: {preprocessed}')
-    sql = eval_inline(model, preprocessed)
-    return sql
+    result = eval_inline(model, preprocessed)
+    return {"success": True, "sql": result["sql"], "model": result["model_result"]}
+    #return {"success": True, "message": 'Skipped eval.'}
 
+# http server handler
+class S(BaseHTTPRequestHandler):
+    def _set_response(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+    def do_POST(self):
+        print("Handling POST...")
+        content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
+        print(f'> Content length: {content_length}')
+        req = self.rfile.read(content_length) # <--- Gets the data itself
+        #logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
+        #        str(self.path), str(self.headers), post_data.decode('utf-8'))
+        self._set_response()
+
+        # process the request
+        input_data = input_fn(req, 'application/json')
+        # load the supplied schema
+        model = globals["model"]
+        model.tables = load_tables([input_data["schema"]])
+        datas = create_datas(model.tables, input_data["db"], input_data["question"])
+        #print(f'Preprocessed: {preprocessed}')
+        output = predict_fn(model, input_data)
+        #output["input"] = input_data
+
+        self.wfile.write(bytearray(json.dumps(output), 'utf-8'))
+        #self.wfile.write("POST request for {}".format(self.path).encode('utf-8'))
+
+globals = {"model": None}
+def run(server_class=HTTPServer, handler_class=S, port=8080):
+    logging.basicConfig(level=logging.INFO)
+    # init model
+    logging.info('Init model...')
+    globals["model"] = model_fn('./saved_model/IRNet_pretrained.model')
+
+    server_address = ('', port)
+    httpd = server_class(server_address, handler_class)
+    logging.info('Starting httpd...\n')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    httpd.server_close()
+    logging.info('Stopping httpd...')
+
+# http server mode
 if __name__ == '__main__':
+    from sys import argv
+
+    if len(argv) == 2:
+        run(port=int(argv[1]))
+    else:
+        run()
+
+# FILE INPUT LOOP
+if __name__ == 'file input loop': # '__main__':
+    print("Loading model...")
+    model = model_fn('./saved_model/IRNet_pretrained.model')
+    input_file = 'input.json'
+    while True:
+        file = input(f'{input_file} >')
+        if len(file) > 0 and file != input_file:
+            input_file = file
+        req = read_input(input_file)
+        input_data = input_fn(req, 'application/json')
+        # load the supplied schema
+        model.tables = load_tables([input_data["schema"]])
+        datas = create_datas(model.tables, input_data["db"], input_data["question"])
+        #print(f'Preprocessed: {preprocessed}')
+        output = predict_fn(model, input_data)
+        print(output)
+
+if __name__ == 'manual input loop': #'__main__':
     model = model_fn('./saved_model/IRNet_pretrained.model')
     db = model.args.db_id
     while True:
@@ -372,8 +462,8 @@ if __name__ == '__main__':
         datas = create_datas(model.tables, db, q)
         preprocessed = process_datas(datas, model.args)
         #print(f'Preprocessed: {preprocessed}')
-        sql = eval_inline(model, preprocessed)
-        print(sql)
+        result = eval_inline(model, preprocessed)
+        print(result)
 
 if __name__ == 'X__main__':
     arg_parser = arg.init_arg_parser()
